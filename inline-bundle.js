@@ -5,27 +5,31 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const distDir = path.join(__dirname, 'dist');
-const distAssetsDir = path.join(distDir, 'assets');
+const distIndexHtml = path.join(__dirname, 'dist', 'index.html');
+let html = fs.readFileSync(distIndexHtml, 'utf8');
 
-let htmlContent = fs.readFileSync(path.join(distDir, 'index.html'), 'utf8');
+const distAssetsDir = path.join(__dirname, 'dist', 'assets');
+const files = fs.readdirSync(distAssetsDir);
+const jsFile = files.find(f => f.endsWith('.js'));
 
-// Find JS file in assets
-const assetFiles = fs.readdirSync(distAssetsDir);
-const jsFile = assetFiles.find(f => f.endsWith('.js'));
-
-if (jsFile) {
-  const jsContent = fs.readFileSync(path.join(distAssetsDir, jsFile), 'utf8');
-  // Replace the script tag with an inline script tag
-  const scriptTagRegex = new RegExp(`<script type="module" crossorigin src="\\.?/assets/${jsFile}"></script>`);
-  htmlContent = htmlContent.replace(
-    scriptTagRegex,
-    `<script type="module">\n${jsContent}\n</script>`
-  );
+if (!jsFile) {
+  console.error('No JS file found in dist/assets!');
+  process.exit(1);
 }
 
-// Write directly to index.html at root C:\Users\SOMU\OneDrive\Desktop\firoz denta\index.html
-const targetPath = path.join(__dirname, 'index.html');
-fs.writeFileSync(targetPath, htmlContent, 'utf8');
-console.log('Successfully bundled standalone website to:', targetPath);
-console.log('Total file size:', htmlContent.length, 'bytes');
+const jsContent = fs.readFileSync(path.join(distAssetsDir, jsFile), 'utf8');
+
+// Replace external script tag with inline module script tag
+const scriptTagRegex = /<script type="module" crossorigin src="\.\/assets\/[^"]+"><\/script>/;
+const inlineScript = `<script type="module">\n${jsContent}\n</script>`;
+
+if (scriptTagRegex.test(html)) {
+  html = html.replace(scriptTagRegex, inlineScript);
+} else {
+  html = html.replace('</body>', `${inlineScript}\n</body>`);
+}
+
+// Write to root index.html
+const outPath = path.join(__dirname, 'index.html');
+fs.writeFileSync(outPath, html, 'utf8');
+console.log('Successfully generated standalone root index.html! Byte size:', html.length);
