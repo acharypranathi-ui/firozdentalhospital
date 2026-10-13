@@ -16,8 +16,6 @@ import {
   Sparkles,
   BarChart3,
   Globe,
-  Instagram,
-  Facebook,
   Check
 } from 'lucide-react';
 import { BLOG_POSTS } from '../data/blogData';
